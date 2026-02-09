@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Data Validation System (Oracle → PostgreSQL)
 
 A unified tool for **data consistency validation** and **intelligent DDL recommendations** between Oracle and PostgreSQL.
@@ -180,3 +181,7 @@ pytest --cov=. --cov-report=html
 ## Requirements
 
 See **requirements.txt**. Python 3.x with Oracle (cx_Oracle/oracledb) and PostgreSQL (psycopg2) drivers.
+=======
+# pg_migration
+migration
+>>>>>>> 6490b6c2aa1fbfd1ca2921d8f9db899b68c08108
