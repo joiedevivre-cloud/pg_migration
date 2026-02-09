@@ -1,0 +1,78 @@
+# Config with secrets — do not commit
+config.yaml
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+NTUSER.*
+ntuser.*
+
+# Reports (generated)
+reports/*.sql
+reports/*.json
+reports/*.txt
+!reports/.gitkeep
+
+# Logs / debug
+*.log
+debug.log
+
+# AWS / credentials
+.aws/
+*.pem
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Sandbox / temp
+.cursor-sandbox/
+.sbx-denybin/
+
+# Home folder (if repo root is user directory)
+OneDrive/
+Documents/
+Downloads/
+Desktop/
+Videos/
+Music/
+Pictures/
+Contacts/
+Favorites/
+Links/
+Saved Games/
+Searches/
+CrossDevice/
+AWS Schema Conversion Tool/
+AppData/
+.cursor/
+.openjfx/
+
+# Windows profile junctions / permission-denied
+Application Data/
+Cookies/
+Local Settings/
+My Documents/
+NetHood/
+PrintHood/
+Recent/
+SendTo/
+Templates/
+시작 메뉴/

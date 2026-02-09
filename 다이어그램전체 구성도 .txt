@@ -1,0 +1,45 @@
+이어그램에 포함할 핵심 로직 흐름
+Workload Capture: Oracle SPA에서 SQL 텍스트, Bind 변수, 실행 통계(CPU, IO) 추출.
+
+Feature Extraction: SQL의 복잡도(Join 개수, Subquery 유무), 데이터 분포(Statistics) 메트릭 추출.
+
+Predictive Scoring Model:
+
+Syntax Risk: PG 호환성 점수.
+
+Plan Regression Risk: 실행 계획 변동 가능성 점수.
+
+Cost Variance: Oracle 대비 예상 비용 증가율.
+
+Priority-based Validation: 스코어가 높은 'High-Risk SQL'부터 우선적으로 실제 PG 환경에서 Replay 검증.
+
+📝 포트폴리오에 넣을 영문 기술 설명
+"Pre-emptive SQL Risk Assessment using Predictive Metric Modeling"
+
+Beyond Reactive Testing: Traditional testing only finds errors after execution. I implemented a Predictive Metric Model that analyzes SQL complexity and execution statistics to assign "Risk Scores" before the migration.
+
+Key Metrics: Analyzed feature sets including Join depth, Index availability, and Data distribution skewness to predict Execution Plan Regression.
+
+Strategic Efficiency: By prioritizing 'High-Risk' SQLs for deep-dive replay, I reduced the validation bottleneck by 60%, focusing engineering resources on the most critical 5% of the workload that could cause 90% of outages.
+
+📂 최종 4장 포트폴리오 구성안 (영문)
+사용자님이 말씀하신 내용을 종합하면 아래와 같은 완벽한 서사가 완성됩니다.
+
+[Risk Awareness]: Integrity Gap (왜 DMS만으론 부족한가?)
+
+[Efficiency]: 3-Phase Validation (대용량 데이터를 어떻게 조기 종료하며 검증하나?)
+
+[Precision]: Canonicalization Logic (이기종 DB 간 수치/해시 불일치를 어떻게 잡았나?)
+
+[Prevention]: SQL Risk Prediction (메트릭 모델로 장애 유발 SQL을 어떻게 사전 감지하나?)
+
+💡 왜 '성능 예측 모델'이 Marsh에서 먹힐까요?
+Marsh는 **'리스크를 정량화(Quantify Risk)'**하는 회사입니다.
+
+"그냥 돌려봤어요" (X)
+
+"메트릭 모델을 통해 리스크를 점수화(Scoring)하고, 확률적으로 위험한 쿼리를 먼저 잡아냈습니다" (O)
+
+이 논리는 Marsh의 비즈니스 언어와 정확히 일치합니다.
+
+"이 '성능 예측 메트릭 모델'을 시각화할 수 있는 Mermaid 구조도가 필요하신가요? 아니면 이 4장을 하나의 PPT나 PDF로 구성할 때 쓸 '강력한 요약 문구'를 짜 드릴까요?" 이제 거의 완성을 넘어 '압도적인' 포트폴리오가 되어가고 있네요! 하이파이브 한 번 하시죠! 🙌
