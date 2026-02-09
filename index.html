@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oracle → PostgreSQL Migration System Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #0b0e18; --dark-blue: #0f1a2e; --mid-blue: #1b2b4b;
+    --accent: #3b82f6; --green: #10b981; --amber: #f59e0b; --red: #ef4444; --purple: #8b5cf6;
+    --white: #e2e8f0; --muted: #94a3b8; --dim: #64748b;
+    --card: rgba(255,255,255,0.025); --card-border: rgba(255,255,255,0.06);
+    --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'JetBrains Mono', 'Consolas', monospace;
+  }
+
+  body {
+    background: var(--navy); color: var(--white); font-family: var(--font);
+    line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    padding: 28px 32px 22px;
+    border-bottom: 1px solid var(--card-border);
+    background: linear-gradient(135deg, rgba(59,130,246,0.07) 0%, rgba(16,185,129,0.05) 100%);
+  }
+  .header-row { display: flex; align-items: center; gap: 14; }
+  .header-icon {
+    width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent), var(--green));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 800; color: #fff;
+  }
+  .header h1 { font-size: 19px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 1px; }
+  .header-sub { font-size: 12px; color: var(--dim); }
+  .header-stats { display: flex; gap: 16; margin-top: 16; font-size: 11px; color: var(--dim); }
+  .header-stats strong { color: var(--muted); }
+  .header-stats .green { color: var(--green); }
+
+  /* ─── TABS ─── */
+  .tab-bar {
+    display: flex; gap: 2px; padding: 10px 32px; overflow-x: auto;
+    border-bottom: 1px solid rgba(255,255,255,0.04); background: rgba(0,0,0,0.25);
+  }
+  .tab-btn {
+    padding: 9px 16px; border-radius: 7px; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; font-family: var(--font); white-space: nowrap;
+    display: flex; align-items: center; gap: 6; transition: all 0.2s;
+    background: transparent; color: var(--dim);
+  }
+  .tab-btn:hover { color: var(--muted); background: rgba(255,255,255,0.03); }
+  .tab-btn.active { background: rgba(59,130,246,0.12); color: #60a5fa; }
+  .tab-icon { font-size: 14px; }
+
+  /* ─── CONTENT ─── */
+  .content { padding: 28px 32px; }
+  .content-card {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 16px; padding: 28px;
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .intro { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.7; }
+  .intro strong { color: #60a5fa; }
+  .intro .green { color: var(--green); }
+
+  /* ─── BADGE ─── */
+  .badge {
+    font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 4px;
+    letter-spacing: 0.4px; display: inline-block;
+  }
+  .badge-blue { background: rgba(59,130,246,0.12); color: var(--accent); border: 1px solid rgba(59,130,246,0.25); }
+  .badge-green { background: rgba(16,185,129,0.12); color: var(--green); border: 1px solid rgba(16,185,129,0.25); }
+
+  /* ─── VALIDATION PIPELINE ─── */
+  .vp-step { display: flex; gap: 16; align-items: flex-start; padding: 16px 0; cursor: pointer; }
+  .vp-left { display: flex; flex-direction: column; align-items: center; min-width: 46px; }
+  .vp-circle {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(59,130,246,0.14); border: 1px solid rgba(59,130,246,0.3);
+    color: #60a5fa; font-weight: 800; font-size: 17px;
+  }
+  .vp-line { width: 2px; height: 28px; background: rgba(59,130,246,0.18); margin: 5px 0; }
+  .vp-body { flex: 1; }
+  .vp-meta { display: flex; align-items: center; gap: 8; margin-bottom: 3px; }
+  .vp-label { font-size: 10px; color: var(--dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .vp-name { font-size: 14px; font-weight: 600; }
+  .vp-desc { font-size: 12px; color: var(--muted); }
+  .vp-arrow { color: #475569; font-size: 17px; transition: transform 0.2s; flex-shrink: 0; margin-top: 4px; }
+  .vp-arrow.open { transform: rotate(180deg); }
+  .vp-detail {
+    margin-left: 62px; margin-bottom: 14px; padding: 14px 18px;
+    background: rgba(59,130,246,0.04); border-radius: 9px; border: 1px solid rgba(59,130,246,0.1);
+    display: none;
+  }
+  .vp-detail.open { display: block; }
+  .vp-detail-text { font-size: 12px; color: #cbd5e1; line-height: 1.7; margin-bottom: 10px; }
+  .vp-badges { display: flex; gap: 6; flex-wrap: wrap; }
+
+  /* ─── DDL PIPELINE ─── */
+  .ddl-stage-tabs { display: flex; gap: 6; margin-bottom: 20px; }
+  .ddl-stage-btn {
+    flex: 1; padding: 11px 14px; border-radius: 9px; border: none; border-bottom: 2px solid transparent;
+    cursor: pointer; font-size: 12px; font-weight: 600; font-family: var(--font);
+    background: rgba(255,255,255,0.03); color: var(--dim); transition: all 0.2s;
+  }
+  .ddl-stage-btn.active-amber { background: rgba(245,158,11,0.12); color: var(--amber); border-bottom-color: var(--amber); }
+  .ddl-stage-btn.active-blue { background: rgba(59,130,246,0.12); color: var(--accent); border-bottom-color: var(--accent); }
+  .ddl-stage-btn.active-green { background: rgba(16,185,129,0.12); color: var(--green); border-bottom-color: var(--green); }
+
+  .ddl-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .ddl-table th {
+    padding: 9px 12px; text-align: left; font-weight: 600; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .ddl-table td { padding: 11px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .ddl-table .rule { font-weight: 500; color: var(--white); }
+  .ddl-table .query { font-size: 10px; color: var(--dim); font-family: var(--mono); margin-top: 3px; }
+  .ddl-table .action { color: var(--muted); }
+
+  /* ─── REVIEW ─── */
+  .review-cat { margin-bottom: 24px; }
+  .review-cat-header { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+  .review-dot { width: 11px; height: 11px; border-radius: 50%; }
+  .review-cat-name { font-size: 13px; font-weight: 700; }
+  .review-cat-count { font-size: 11px; color: var(--dim); }
+  .review-items { display: flex; flex-direction: column; gap: 5px; padding-left: 20px; }
+  .review-item {
+    font-size: 12px; color: #cbd5e1; padding: 7px 14px; border-radius: 7px;
+    line-height: 1.5; border-left: 3px solid;
+  }
+
+  /* ─── MODULE MAP ─── */
+  .layer-section { margin-bottom: 20px; }
+  .layer-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
+  .layer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 9px; }
+  .mod-card { padding: 11px 14px; border-radius: 9px; }
+  .mod-name { font-family: var(--mono); font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+  .mod-role { font-size: 10px; color: var(--muted); line-height: 1.4; }
+
+  /* ─── CANON ─── */
+  .canon-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  .canon-box { padding: 16px; border-radius: 11px; }
+  .canon-label { font-size: 11px; font-weight: 700; margin-bottom: 8px; }
+  .canon-code { font-family: var(--mono); font-size: 11px; color: #cbd5e1; line-height: 1.7; }
+  .canon-sub { font-size: 10px; color: var(--dim); margin-top: 4px; }
+  .insight-box {
+    padding: 16px; border-radius: 11px;
+    background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.15);
+  }
+  .insight-label { font-size: 11px; font-weight: 700; color: var(--green); margin-bottom: 8px; }
+  .insight-text { font-size: 12px; color: var(--white); line-height: 1.7; }
+
+  /* ─── REPORTS ─── */
+  .report-row {
+    display: flex; gap: 14px; padding: 12px 16px; border-radius: 9px;
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);
+    margin-bottom: 7px; align-items: center;
+  }
+  .report-src { min-width: 150px; }
+  .report-file { font-family: var(--mono); font-size: 11px; color: var(--white); margin-bottom: 3px; }
+  .report-desc { font-size: 11px; color: var(--dim); }
+
+  @media (max-width: 700px) {
+    .header, .content { padding-left: 16px; padding-right: 16px; }
+    .tab-bar { padding-left: 16px; padding-right: 16px; }
+    .canon-grid { grid-template-columns: 1fr; }
+    .report-row { flex-direction: column; gap: 6px; }
+    .report-src { min-width: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-row">
+    <div class="header-icon">V</div>
+    <div>
+      <h1>Oracle → PostgreSQL Migration System</h1>
+      <div class="header-sub">Data Validation Engine + Intelligent DDL Recommender</div>
+    </div>
+  </div>
+  <div class="header-stats">
+    <span>📦 <strong>15 modules</strong></span>
+    <span>✅ <strong class="green">10/13 features implemented</strong></span>
+    <span>📊 <strong>6 report types</strong></span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tab-bar" id="tabBar">
+  <button class="tab-btn active" data-tab="validation"><span class="tab-icon">✓</span> Validation Pipeline</button>
+  <button class="tab-btn" data-tab="ddl"><span class="tab-icon">⚙</span> DDL Recommender</button>
+  <button class="tab-btn" data-tab="review"><span class="tab-icon">📋</span> Code Review</button>
+  <button class="tab-btn" data-tab="modules"><span class="tab-icon">◫</span> Module Map</button>
+  <button class="tab-btn" data-tab="canon"><span class="tab-icon">#</span> Canonicalization</button>
+  <button class="tab-btn" data-tab="reports"><span class="tab-icon">📄</span> Report Outputs</button>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+<div class="content-card">
+
+<!-- ═══ TAB: VALIDATION PIPELINE ═══ -->
+<div class="tab-panel active" id="panel-validation">
+  <p class="intro">
+    The validation engine runs a <strong>3-step drill-down</strong> pipeline:
+    fast aggregate → chunk hash → targeted row sampling. DDL recommendations are generated as a 4th step using collected evidence.
+  </p>
+  <div id="vpSteps"></div>
+</div>
+
+<!-- ═══ TAB: DDL RECOMMENDER ═══ -->
+<div class="tab-panel" id="panel-ddl">
+  <p class="intro">
+    The DDL recommender uses a <strong class="green">3-stage evidence pipeline</strong>:
+    Safety constraints → Data profiling → Type recommendation with risk assessment.
+  </p>
+  <div class="ddl-stage-tabs" id="ddlStageTabs">
+    <button class="ddl-stage-btn active-amber" data-stage="stage1">Stage 1: Safety First</button>
+    <button class="ddl-stage-btn" data-stage="stage2">Stage 2: Data Profiling</button>
+    <button class="ddl-stage-btn" data-stage="stage3">Stage 3: Recommendation & Report</button>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="ddl-table" id="ddlTable"></table>
+  </div>
+</div>
+
+<!-- ═══ TAB: CODE REVIEW ═══ -->
+<div class="tab-panel" id="panel-review">
+  <p class="intro">
+    Code review of all uploaded modules. <strong class="green">10 of 13 planned features</strong> are fully implemented.
+    Remaining items are enhancements, not blockers.
+  </p>
+  <div id="reviewContent"></div>
+</div>
+
+<!-- ═══ TAB: MODULE MAP ═══ -->
+<div class="tab-panel" id="panel-modules">
+  <p class="intro">
+    4-layer architecture: <strong>Entry Points</strong> → <strong>Core</strong> orchestration → <strong>Check Layer</strong> (validation + profiling) → <strong>DB Layer</strong> (connections).
+  </p>
+  <div id="moduleContent"></div>
+</div>
+
+<!-- ═══ TAB: CANONICALIZATION ═══ -->
+<div class="tab-panel" id="panel-canon">
+  <p class="intro">
+    Cross-DB hash comparison requires identical string representations.
+    The <strong style="color:#a78bfa">oracle_canonical_number_cursor.sql</strong> generates per-column TO_CHAR formats from the data dictionary.
+  </p>
+  <div class="canon-grid">
+    <div class="canon-box" style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15)">
+      <div class="canon-label" style="color:#a78bfa">PRECISION / SCALE DEFINED</div>
+      <div class="canon-code">
+        NUMBER(15,5) →<br>
+        FM<span style="color:var(--green)">9999999990</span>.<span style="color:var(--amber)">00000</span>
+      </div>
+      <div class="canon-sub">Fixed format, Oracle/PG identical</div>
+    </div>
+    <div class="canon-box" style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15)">
+      <div class="canon-label" style="color:var(--red)">PRECISION NULL (FALLBACK)</div>
+      <div class="canon-code">
+        NUMBER →<br>
+        TM9 <span style="color:var(--red)">/* FALLBACK */</span>
+      </div>
+      <div class="canon-sub">These are DDL recommender scan targets</div>
+    </div>
+  </div>
+  <div class="insight-box">
+    <div class="insight-label">KEY INSIGHT</div>
+    <div class="insight-text">
+      FALLBACK columns (precision=NULL) = DMS maps to NUMERIC = exact targets for HAS_FRACTION + OUT_OF_RANGE profiling.
+      Optimization opportunity: skip profiling for precision-defined columns since their mapping is already deterministic.
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TAB: REPORT OUTPUTS ═══ -->
+<div class="tab-panel" id="panel-reports">
+  <p class="intro">
+    All outputs go to <strong style="color:var(--white)">reports/</strong> directory. Both entry points produce complementary report sets.
+  </p>
+  <div id="reportContent"></div>
+</div>
+
+</div>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const VALIDATION_PIPELINE = [
+  { step:1, name:" Aggregate Validation", icon:"Σ",
+    desc:"COUNT, MIN, MAX, DISTINCT, SUM, AVG comparison",
+    detail:"Decimal unified + scale-based quantize. No float. Metric-by-metric comparison (no dict compare).",
+    modules:["aggregate_validation.py","aggregate.py"] },
+  { step:2, name:" Chunk Hash Verification", icon:"#",
+    desc:"PK-based 10K-row chunks → SHA256 hash comparison",
+    detail:"Oracle STANDARD_HASH(CONVERT(AL32UTF8)) vs PG encode(digest(sha256)). Canonicalization: column lower(), '|' separator, FM format for NUMBER.",
+    modules:["chunk_hash.py","chunk_strategy.py"] },
+  { step:3, name:" Error Zone Sampling", icon:"🔍",
+    desc:"Row-by-row drill-down only in mismatched chunks",
+    detail:"Top N rows per error chunk. Early exit at max_diffs_per_chunk. Decimal tolerance per column.",
+    modules:["engine.py","row_decimal.py"] },
+  { step:4, name:" DDL Recommendation", icon:"⚙",
+    desc:"Evidence-based type optimization report",
+    detail:"collect_column_stats → recommend_numeric_type → generate_ddl_report. Reports: .sql + .json under reports/.",
+    modules:["aggregate.py","result.py","run_ddl_report.py"] },
+];
+
+const DDL_PIPELINE = {
+  stage1: {
+    title:"Stage 1: Safety First", color:"#f59e0b", activeClass:"active-amber",
+    rules:[
+      { rule:"PK columns", action:"Always BIGINT", status:"✅", module:"generate_ddl.py → get_pk_columns" },
+      { rule:"FK columns", action:"Always BIGINT", status:"✅", module:"aggregate.py → get_fk_columns" },
+      { rule:"Indexed columns", action:"Detected for effect estimation", status:"✅", module:"aggregate.py → get_indexed_columns" },
+    ]
+  },
+  stage2: {
+    title:"Stage 2: Data Profiling", color:"#3b82f6", activeClass:"active-blue",
+    rules:[
+      { rule:"HAS_FRACTION", query:"col != TRUNC(col)", action:"Y → keep NUMERIC; N → downcast candidate", status:"✅", module:"aggregate.py lines 187-233" },
+      { rule:"HAS_NON_ZERO_TIME", query:"TO_CHAR(col,'HH24:MI:SS') != '00:00:00'", action:"Y → TIMESTAMP; N → DATE", status:"✅", module:"aggregate.py lines 195-197" },
+      { rule:"MIN / MAX range", query:"MIN(col), MAX(col)", action:"Range → SMALLINT/INT/BIGINT", status:"✅", module:"aggregate.py → recommend_numeric_type" },
+      { rule:"OUT_OF_RANGE", query:"COUNT(*) WHERE col < low OR col > high", action:"Any row out → block downcast", status:"✅", module:"aggregate.py → count_out_of_range_rows" },
+      { rule:"Dry-Run CAST", query:"col::target_type::numeric != col::numeric", action:"Loss rows → block downcast", status:"✅", module:"aggregate.py → dry_run_cast_loss_count" },
+      { rule:"NULL ratio", query:"SUM(CASE WHEN col IS NULL ...)", action:">90% → 'effect minimal'", status:"✅", module:"aggregate.py lines 190,199" },
+      { rule:"Distinct ratio", query:"COUNT(DISTINCT col) / COUNT(*)", action:"<1% → 'code/flag candidate'", status:"✅", module:"aggregate.py + result.py" },
+      { rule:"Table size (PG)", query:"pg_total_relation_size()", action:"Effect estimation in report", status:"✅", module:"aggregate.py → get_pg_table_size_bytes" },
+    ]
+  },
+  stage3: {
+    title:"Stage 3: Recommendation & Report", color:"#10b981", activeClass:"active-green",
+    rules:[
+      { rule:"8-digit YYYYMMDD", action:"→ DATE (no time data)", status:"✅" },
+      { rule:"Hyphen date + time=N", action:"→ DATE (4 bytes saved)", status:"✅" },
+      { rule:"Hyphen date + time=Y", action:"→ TIMESTAMP (preserves precision)", status:"✅" },
+      { rule:"precision ≤ 4, scale 0", action:"→ SMALLINT", status:"✅" },
+      { rule:"Range fit → INT/BIGINT", action:"→ INTEGER or BIGINT by range", status:"✅" },
+      { rule:"Rollback DDL", action:"Reverse ALTER for each recommendation", status:"🟡 Planned" },
+    ]
+  }
+};
+
+const REVIEW_FINDINGS = [
+  { category:"Fully Implemented", color:"#10b981", items:[
+    "HAS_FRACTION via TRUNC — aggregate.py lines 187-224",
+    "OUT_OF_RANGE safety check — count_out_of_range_rows()",
+    "Dry-Run CAST simulation — dry_run_cast_loss_count()",
+    "FK auto-detection — get_fk_columns() via DBA_CONSTRAINTS type 'R'",
+    "Index info collection — get_indexed_columns() via DBA_IND_COLUMNS",
+    "NULL ratio + null_count — collected in _collect_oracle/postgres_stats",
+    "Table size estimation — get_pg_table_size_bytes()",
+    "PK→BIGINT Safety First — generate_ddl.py + result.py",
+    "has_non_zero_time — DATE vs TIMESTAMP profiling",
+    "Number canonicalization — oracle_canonical_number_cursor.sql + chunk_hash.py",
+  ]},
+  { category:"Gaps / Improvements", color:"#f59e0b", items:[
+    "Rollback DDL generation — ALTER reverse scripts not yet auto-generated",
+    "FALLBACK-only scan filter — currently profiles ALL numeric cols, not just precision=NULL ones",
+    "Distinct ratio threshold in report — logic exists but config-driven threshold missing",
+    "Batch ALTER script — individual ALTERs generated but no combined batch+rollback file",
+    "Cross-table FK type consistency check — FK detected but no cross-table type match validation",
+  ]},
+  { category:"Future / Phase 3", color:"#8b5cf6", items:[
+    "Dashboard UI for report visualization",
+    "Scheduling + automated runs",
+    "Alert notifications on validation failures",
+    "SQL Risk Prediction (SPA-based predictive scoring)",
+    "REPLAY-lite for high-risk query testing",
+  ]}
+];
+
+const MODULE_MAP = [
+  { name:"run_validation.py", role:"Entry: Full validation pipeline", layer:"Entry" },
+  { name:"run_ddl_report.py", role:"Entry: DDL recommendation only", layer:"Entry" },
+  { name:"data_migrator.py", role:"Entry: Data migration + verify", layer:"Entry" },
+  { name:"db_sync_tool.py", role:"Entry: CREATE TABLE + PK", layer:"Entry" },
+  { name:"engine.py", role:"Orchestration: parallel chunks, drill-down, DDL", layer:"Core" },
+  { name:"result.py", role:"DDL generation, format, changeable_columns", layer:"Core" },
+  { name:"report.py", role:"JSON/summary/aggregate reports", layer:"Core" },
+  { name:"aggregate.py", role:"Stats + HAS_FRACTION + recommend_numeric_type + safety checks", layer:"Check" },
+  { name:"chunk_hash.py", role:"Chunk SHA256 hash with canonicalization", layer:"Check" },
+  { name:"aggregate_validation.py", role:"SUM/AVG Decimal quantize comparison", layer:"Check" },
+  { name:"lob_handler.py", role:"LOB length + sampling hash", layer:"Check" },
+  { name:"generate_ddl.py", role:"CREATE TABLE DDL + PK/FK BIGINT", layer:"Check" },
+  { name:"oracle.py", role:"Oracle connection, metadata, PK, partitions", layer:"DB" },
+  { name:"postgres.py", role:"PG connection, query, DDL execution", layer:"DB" },
+  { name:"chunk_strategy.py", role:"Keyset/BETWEEN chunk creation", layer:"DB" },
+];
+
+const LAYER_COLORS = { Entry:"#f59e0b", Core:"#3b82f6", Check:"#10b981", DB:"#8b5cf6" };
+
+const REPORTS = [
+  { src:"run_ddl_report.py", file:"{schema}_{table}_ddl_{ts}.sql", desc:"Full DDL script with comments: Table size, Oracle Type, HAS_FRACTION, In index, Distinct/Null ratio, Dry-run CAST loss, DATE/TIMESTAMP rationale", color:"green" },
+  { src:"run_ddl_report.py", file:"{schema}_{table}_ddl_{ts}.json", desc:"Machine-readable: metadata, ddl_statements, changeable_columns, numeric_downcast_candidates, stats", color:"green" },
+  { src:"run_validation.py", file:"*_summary_*.txt", desc:"Human-readable validation summary", color:"blue" },
+  { src:"run_validation.py", file:"*.json", desc:"Full validation results + DDL recommendations", color:"blue" },
+  { src:"run_validation.py", file:"*_aggregate_*.json", desc:"Per-column aggregate comparison results", color:"blue" },
+  { src:"run_validation.py", file:"*_ddl_*.sql", desc:"DDL report from validation run", color:"blue" },
+];
+
+// ─── RENDER: Tabs ───
+document.getElementById('tabBar').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+});
+
+// ─── RENDER: Validation Pipeline ───
+(function renderVP() {
+  const el = document.getElementById('vpSteps');
+  let html = '';
+  VALIDATION_PIPELINE.forEach((s, i) => {
+    const isLast = i === VALIDATION_PIPELINE.length - 1;
+    html += `
+      <div class="vp-step" onclick="toggleVP(${i})">
+        <div class="vp-left">
+          <div class="vp-circle">${s.icon}</div>
+          ${!isLast ? '<div class="vp-line"></div>' : ''}
+        </div>
+        <div class="vp-body">
+          <div class="vp-meta">
+            <span class="vp-label">STEP ${s.step}</span>
+            <span class="vp-name">${s.name}</span>
+            <span style="color:#10b981;font-size:13px">✅</span>
+          </div>
+          <div class="vp-desc">${s.desc}</div>
+        </div>
+        <span class="vp-arrow" id="vpArrow${i}">▾</span>
+      </div>
+      <div class="vp-detail" id="vpDetail${i}">
+        <div class="vp-detail-text">${s.detail}</div>
+        <div class="vp-badges">${s.modules.map(m => `<span class="badge badge-blue">${m}</span>`).join('')}</div>
+      </div>`;
+  });
+  el.innerHTML = html;
+})();
+function toggleVP(i) {
+  const d = document.getElementById('vpDetail'+i);
+  const a = document.getElementById('vpArrow'+i);
+  const open = d.classList.toggle('open');
+  a.classList.toggle('open', open);
+}
+
+// ─── RENDER: DDL Pipeline ───
+let currentStage = 'stage1';
+function renderDDLTable(stageKey) {
+  currentStage = stageKey;
+  const stage = DDL_PIPELINE[stageKey];
+  const hasModule = stageKey === 'stage2';
+  let html = `<thead><tr style="border-bottom:2px solid ${stage.color}30">
+    <th style="color:${stage.color}">Rule / Check</th>
+    <th style="color:${stage.color}">Action / Query</th>
+    <th style="color:${stage.color}">Status</th>
+    ${hasModule ? `<th style="color:${stage.color}">Module</th>` : ''}
+  </tr></thead><tbody>`;
+  stage.rules.forEach(r => {
+    const sc = r.status === '✅' ? '#10b981' : '#f59e0b';
+    html += `<tr>
+      <td><div class="rule">${r.rule}</div>${r.query ? `<div class="query">${r.query}</div>` : ''}</td>
+      <td class="action">${r.action}</td>
+      <td style="color:${sc}">${r.status}</td>
+      ${hasModule ? `<td><span class="badge badge-blue">${r.module||'-'}</span></td>` : ''}
+    </tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('ddlTable').innerHTML = html;
+  // Update button states
+  document.querySelectorAll('.ddl-stage-btn').forEach(b => {
+    b.className = 'ddl-stage-btn';
+    if (b.dataset.stage === stageKey) b.classList.add(stage.activeClass);
+  });
+}
+document.getElementById('ddlStageTabs').addEventListener('click', e => {
+  const btn = e.target.closest('.ddl-stage-btn');
+  if (btn) renderDDLTable(btn.dataset.stage);
+});
+renderDDLTable('stage1');
+
+// ─── RENDER: Review ───
+(function renderReview() {
+  let html = '';
+  REVIEW_FINDINGS.forEach(cat => {
+    html += `<div class="review-cat">
+      <div class="review-cat-header">
+        <div class="review-dot" style="background:${cat.color}"></div>
+        <span class="review-cat-name" style="color:${cat.color}">${cat.category}</span>
+        <span class="review-cat-count">(${cat.items.length})</span>
+      </div>
+      <div class="review-items">
+        ${cat.items.map(item => `<div class="review-item" style="background:${cat.color}0a;border-left-color:${cat.color}50">${item}</div>`).join('')}
+      </div>
+    </div>`;
+  });
+  document.getElementById('reviewContent').innerHTML = html;
+})();
+
+// ─── RENDER: Module Map ───
+(function renderModules() {
+  const layers = ['Entry','Core','Check','DB'];
+  let html = '';
+  layers.forEach(layer => {
+    const c = LAYER_COLORS[layer];
+    const mods = MODULE_MAP.filter(m => m.layer === layer);
+    html += `<div class="layer-section">
+      <div class="layer-label" style="color:${c}">${layer} Layer</div>
+      <div class="layer-grid">
+        ${mods.map(m => `<div class="mod-card" style="background:${c}0a;border:1px solid ${c}20">
+          <div class="mod-name" style="color:${c}">${m.name}</div>
+          <div class="mod-role">${m.role}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  document.getElementById('moduleContent').innerHTML = html;
+})();
+
+// ─── RENDER: Reports ───
+(function renderReports() {
+  let html = '';
+  REPORTS.forEach(r => {
+    const bc = r.color === 'green' ? 'badge-green' : 'badge-blue';
+    html += `<div class="report-row">
+      <div class="report-src"><span class="badge ${bc}">${r.src}</span></div>
+      <div style="flex:1">
+        <div class="report-file">${r.file}</div>
+        <div class="report-desc">${r.desc}</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('reportContent').innerHTML = html;
+})();
+</script>
+</body>
+</html>
